@@ -1,0 +1,115 @@
+\documentclass[12pt]{article}
+\bibliographystyle{plain}
+%
+\usepackage{amsmath}
+%\usepackage{geometry}
+%\usepackage{algpseudocode}
+%\usepackage{algorithm}
+%
+%
+%\geometry{letterpaper,
+%          left   = 1in,
+%          right  = 1in,
+%          top    = 1in,
+%          bottom = 1in}
+%\renewcommand{\baselinestretch}{1.1}
+%\renewcommand{\arraystretch}{1.1}
+%\usepackage{amsmath, amsthm, amssymb} % Latex Math Include
+%
+%
+%% Custom commands
+%% ----------------------------------------------------------------------------------------------------
+%\newcounter{count}
+%\newcommand{\bS}[1] {\boldsymbol  #1}
+%\newcommand{\aI}{\forall i \in \{1,2,\ldots, N\}}
+%\newcommand{\aJ}{\forall j \in \{1,2,\ldots, J\}}
+%\newcommand{\MLE}{\hat{\bS{\beta}}_{MLE}}
+
+% Title
+% ----------------------------------------------------------------------------------------------------
+
+\author{Srikrishna Sridhar, Mark Wellons}
+\title{Robust Variance via Sandwich Estimators: Design Document}
+\begin{document}
+\maketitle
+%\large
+%\begin{center}
+%{\sc \bf Design Document -- Not for Distribution}
+%\end{center}
+%\normalsize
+
+\section{Introduction}
+Given a regression setup of $n$ data points, each defined by a feature  vector $x_i$ and a category $y_i$, we assume that $y_i$ is controlled by a $k$-dimensional parameter vector $\theta$.  Generally, we are interested in finding the values of $\theta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some likelihood function $L(y,x,\theta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
+\begin{align}
+\psi(y,x, \theta) = \frac{\partial L(x,y,\theta)}{\partial \theta}
+\end{align} 
+and $H$ is defined as
+\begin{align}
+H(y,x, \theta) = \frac{\partial^2 L(x,y,\theta)}{\partial \theta^2}.
+\end{align} 
+
+
+
+In addition to the values of $\theta$, we may also be interested in the covariance matrix $S(\theta)$ of $\theta$.  This can be expressed in a \textit{sandwich formulation}, of the form
+\begin{align}
+S(\theta) = B(\theta) M(\theta) B(\theta).  
+\end{align}
+The $B(\theta)$ matrix is commonly called the \textit{bread}, whereas the $M(\theta)$ matrix is the \textit{meat}.  
+
+\subsection{The Bread}
+Computing $B$ is relatively straightforward, 
+\begin{align}
+B(\theta) = n\left(\sum_i^n -H(y_i, x_i, \theta) \right)^{-1}
+\end{align}
+
+\subsection{The Meat}
+There are several choices for the $M$ matrix, each with different robustness properties.  The estimators we are interested in for this implementation are the Huber/White estimator, and the clustered estimator.  
+
+In the Huber/White estimator, the matrix $M$ is defined as
+\begin{align}
+M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \theta)^T  \psi(y_i,x_i, \theta).
+\end{align}
+
+%The Huber/White estimator is a diagonal matrix defined as
+%\begin{align}
+%M_W =\frac{1}{n} X^T \left(
+%      \begin{array}{cccc}
+%        r(y_1, x_1^T\theta) & 0&\ldots &0 \\
+%        0&r(y_2, x_2^T\theta) &\dots& \vdots \\
+%	\vdots & \vdots & \ddots&\vdots \\
+%        0 & \ldots & \ldots &r(y_n, x_n^T\theta)
+%      \end{array} \right) X.
+%\end{align}
+%The matrix $X$ is the data matrix, and $r$ is the residual function.  The residual function is defined by the application, but it has the relationship
+%\begin{align}
+%  \psi(y_i,x_i, \theta) = r(y_i, x_i^T\theta)x_i.  
+%\end{align} 
+%This means that it can be computed in the general case as 
+%\begin{align}
+% r(y_i, x_i^T\theta) =  \frac{\psi(y_i,x_i, \theta)}{x_i}
+%\end{align}
+%
+%In the case of the clustered sandwich estimator, $M$ is defined as 
+
+
+\section{Implementation}
+
+Here we describe the Huber-White implementation for each regression.  
+
+
+\subsection{Linear Regression}
+
+\subsection{Logistic Regression}
+The Huber-White sandwich estimator is implemented for logistic regression mimics the same framework for the logistic regression implementations, doing the gradient and Hessian calculation in  parallel.  
+
+This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  The transition step computes the gradient and Hessian contribution from each row in the data matrix. The merge step sum two or more steps together.  The final step computes the inverse of the Hessian, the coefficients of the sandwich operator, and several statistics.  The gradient and Hessian calculations are identical to the gradient and Hessian calculations for logistic regression.  
+
+The statistics that are computed are the standard errors, the z-values, and the p-values.  
+\subsection{Multinomial Logistic Regression}
+
+\subsection{Cox Proportional Hazards}
+
+%\subsection{Grouping Support}
+
+\end{document}
+
