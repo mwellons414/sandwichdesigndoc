@@ -28,8 +28,8 @@
 % Title
 % ----------------------------------------------------------------------------------------------------
 
-\author{Srikrishna Sridhar, Mark Wellons}
-\title{Robust Variance via Sandwich Estimators: Design Document}
+%\author{Mark Wellons}
+\title{Robust Variance via Huber-White Sandwich Estimators}
 \begin{document}
 \maketitle
 %\large
@@ -39,7 +39,7 @@
 %\normalsize
 
 \section{Introduction}
-Given a regression setup of $n$ data points, each defined by a feature  vector $x_i$ and a category $y_i$, we assume that $y_i$ is controlled by a $k$-dimensional parameter vector $\theta$.  Generally, we are interested in finding the values of $\theta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some likelihood function $L(y,x,\theta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
+Given  $n$ data points, each defined by a feature  vector $x_i$ and a category $y_i$, we assume that $y_i$ is drawn from a distribution determined by a $k$-dimensional parameter vector $\theta$.  Generally, we are interested in finding the values of $\theta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some likelihood function $L(y,x,\theta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
 \begin{align}
 \psi(y,x, \theta) = \frac{\partial L(x,y,\theta)}{\partial \theta}
 \end{align} 
@@ -47,10 +47,10 @@ and $H$ is defined as
 \begin{align}
 H(y,x, \theta) = \frac{\partial^2 L(x,y,\theta)}{\partial \theta^2}.
 \end{align} 
+Using these derivatives, one can solve the logistic or linear regression for the optimal solution, and compute the variance and other statistics of the regression.  
 
 
-
-In addition to the values of $\theta$, we may also be interested in the covariance matrix $S(\theta)$ of $\theta$.  This can be expressed in a \textit{sandwich formulation}, of the form
+However, we may believe that the underlying model is incorrect (our assumption that  $y_i$ is determined by $\theta$ is wrong), in which case, our variance estimates will be incorrect.  The Huber sandwich estimator is used to get a estimate of the variance robust to specification errors in the underlying model.  The estimator is known as a sandwich estimator because the robust covariance matrix $S(\theta)$ of $\theta$ can be expressed in a \textit{sandwich formulation}, of the form
 \begin{align}
 S(\theta) = B(\theta) M(\theta) B(\theta).  
 \end{align}
@@ -63,9 +63,7 @@ B(\theta) = n\left(\sum_i^n -H(y_i, x_i, \theta) \right)^{-1}
 \end{align}
 
 \subsection{The Meat}
-There are several choices for the $M$ matrix, each with different robustness properties.  The estimators we are interested in for this implementation are the Huber/White estimator, and the clustered estimator.  
-
-In the Huber/White estimator, the matrix $M$ is defined as
+There are several choices for the $M$ matrix, each with different robustness properties.  In the Huber-White estimator, the matrix $M$ is defined as
 \begin{align}
 M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \theta)^T  \psi(y_i,x_i, \theta).
 \end{align}
@@ -89,27 +87,39 @@ M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \theta)^T  \psi(y_i,x_i, \theta).
 % r(y_i, x_i^T\theta) =  \frac{\psi(y_i,x_i, \theta)}{x_i}
 %\end{align}
 %
-%In the case of the clustered sandwich estimator, $M$ is defined as 
 
 
 \section{Implementation}
 
-Here we describe the Huber-White implementation for each regression.  
+The Huber-White sandwich estimators implemented for linear, logistic, and multinomial-logistic regression mimic the same framework as  the linear/logistic regression implementations.  In these implementations, the gradient and Hessian are computed in parallel, and a final step operates on the aggregate result.  
+
+This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  The transition step computes the gradient and Hessian contribution from each row in the data matrix. The merge step sum two or more steps together.  The final step computes the inverse of the Hessian, the coefficients of the sandwich operator, and other relevant statistics appropriate to the regression.  %The gradient and Hessian calculations are identical to the gradient and Hessian calculations for logistic regression.  
+
+We note that the Hessian and derivative both depend on $\theta$, so the variance estimates will also depend on $\theta$.  Rather than allow the user to specify a $\theta$ value, the implementation computes the optimal $\theta$ by running the appropriate regression  before computing the robust variance.  In cases where the regression has parameters (regression tolerance, max iterations), the interface allows the user to specify those parameters.
 
 
-\subsection{Linear Regression}
+\section{Input}
+	The robust variance function calls all have similar interfaces.  The common argument parameters are (in order):
+\begin{description}
+\item [source table] The table containing the source data.  
+\item [output table] The name of the table containg the computed statistics.  The function throws an error if the output table already exists. 
+\item [dependent variable] The dependent variable in the regression.   
+\item [independent variables]  The independent variables in the regression.    
+\item [grouping variable(s)]  The source table is divided into disjoint groups by the value of the grouping variable.  The robust variance and other statistics are computed and returned for each group.  
+\end{description}
+	In addition, each robust variance calculation can have arguments specific to that regression.  Regression specific arguments  always come after the common arguments.  
 
-\subsection{Logistic Regression}
-The Huber-White sandwich estimator is implemented for logistic regression mimics the same framework for the logistic regression implementations, doing the gradient and Hessian calculation in  parallel.  
+\section{Output}
+	The output will be written to the table specified in the function call, and includes:
+\begin{description}
+\item [regression coefficients] The optimal coefficients computed by the regression.  
+\item [standard errors] The standard errors of the robust variance.
+\item [t- or z-statistics] The t- or z-statistics of the robust variance.   
+\item [p-values]  The p-values.      
+\end{description}
 
-This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  The transition step computes the gradient and Hessian contribution from each row in the data matrix. The merge step sum two or more steps together.  The final step computes the inverse of the Hessian, the coefficients of the sandwich operator, and several statistics.  The gradient and Hessian calculations are identical to the gradient and Hessian calculations for logistic regression.  
+	
 
-The statistics that are computed are the standard errors, the z-values, and the p-values.  
-\subsection{Multinomial Logistic Regression}
-
-\subsection{Cox Proportional Hazards}
-
-%\subsection{Grouping Support}
 
 \end{document}
 
