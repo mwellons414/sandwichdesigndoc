@@ -2,6 +2,7 @@
 \bibliographystyle{plain}
 %
 \usepackage{amsmath}
+\usepackage{amssymb}
 %\usepackage{geometry}
 %\usepackage{algpseudocode}
 %\usepackage{algorithm}
@@ -39,52 +40,53 @@
 %\normalsize
 
 \section{Introduction}
-Given  $n$ data points, each defined by a feature  vector $x_i$ and a category $y_i$, we assume that $y_i$ is drawn from a distribution determined by a $k$-dimensional parameter vector $\theta$.  Generally, we are interested in finding the values of $\theta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some likelihood function $L(y,x,\theta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
+Given  $n$ data points, where the $i$th point is defined by a feature  vector $x_i \in \mathbb{R}^m$ and a category scalar $y_i$, where $y_i \in \mathbb{R}, y_i \in \{0,1 \}$, and $y_i \in \{1,\dots, l \}$ for linear, logistic, and multi-logistic regression respectively.  We assume that $y_i$ is drawn from an iid distribution determined by a $g$-dimensional parameter vector $\beta$ (which is $g\times l$ dimensional for multi-logistic regression).  Generally, we are interested in finding the values of $\beta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some log-likelihood function $L(y,x,\beta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
 \begin{align}
-\psi(y,x, \theta) = \frac{\partial L(x,y,\theta)}{\partial \theta}
+\psi(y,x, \beta) = \frac{\partial L(x,y,\beta)}{\partial \beta}
 \end{align} 
 and $H$ is defined as
 \begin{align}
-H(y,x, \theta) = \frac{\partial^2 L(x,y,\theta)}{\partial \theta^2}.
+H(y,x, \beta) = \frac{\partial^2 L(x,y,\beta)}{\partial \beta^2}.
 \end{align} 
 Using these derivatives, one can solve the logistic or linear regression for the optimal solution, and compute the variance and other statistics of the regression.  
 
 
-However, we may believe that the underlying model is incorrect (our assumption that  $y_i$ is determined by $\theta$ is wrong), in which case, our variance estimates will be incorrect.  The Huber sandwich estimator is used to get a estimate of the variance robust to specification errors in the underlying model.  The estimator is known as a sandwich estimator because the robust covariance matrix $S(\theta)$ of $\theta$ can be expressed in a \textit{sandwich formulation}, of the form
+However, we may believe that the underlying distribution is not iid, (in particular, the variance is not independent of $x_i$), in which case, our variance estimates will be incorrect. 
+ The Huber sandwich estimator is used to get a robust estimate of the variance even if the iid assumption is wrong.  The estimator is known as a sandwich estimator because the robust covariance matrix $S(\beta)$ of $\beta$ can be expressed in a \textit{sandwich formulation}, of the form
 \begin{align}
-S(\theta) = B(\theta) M(\theta) B(\theta).  
+S(\beta) = B(\beta) M(\beta) B(\beta).  
 \end{align}
-The $B(\theta)$ matrix is commonly called the \textit{bread}, whereas the $M(\theta)$ matrix is the \textit{meat}.  
+The $B(\beta)$ matrix is commonly called the \textit{bread}, whereas the $M(\beta)$ matrix is the \textit{meat}.  
 
 \subsection{The Bread}
 Computing $B$ is relatively straightforward, 
 \begin{align}
-B(\theta) = n\left(\sum_i^n -H(y_i, x_i, \theta) \right)^{-1}
+B(\beta) = n\left(\sum_i^n -H(y_i, x_i, \beta) \right)^{-1}
 \end{align}
 
 \subsection{The Meat}
 There are several choices for the $M$ matrix, each with different robustness properties.  In the Huber-White estimator, the matrix $M$ is defined as
 \begin{align}
-M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \theta)^T  \psi(y_i,x_i, \theta).
+M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \beta)^T  \psi(y_i,x_i, \beta).
 \end{align}
 
 %The Huber/White estimator is a diagonal matrix defined as
 %\begin{align}
 %M_W =\frac{1}{n} X^T \left(
 %      \begin{array}{cccc}
-%        r(y_1, x_1^T\theta) & 0&\ldots &0 \\
-%        0&r(y_2, x_2^T\theta) &\dots& \vdots \\
+%        r(y_1, x_1^T\beta) & 0&\ldots &0 \\
+%        0&r(y_2, x_2^T\beta) &\dots& \vdots \\
 %	\vdots & \vdots & \ddots&\vdots \\
-%        0 & \ldots & \ldots &r(y_n, x_n^T\theta)
+%        0 & \ldots & \ldots &r(y_n, x_n^T\beta)
 %      \end{array} \right) X.
 %\end{align}
 %The matrix $X$ is the data matrix, and $r$ is the residual function.  The residual function is defined by the application, but it has the relationship
 %\begin{align}
-%  \psi(y_i,x_i, \theta) = r(y_i, x_i^T\theta)x_i.  
+%  \psi(y_i,x_i, \beta) = r(y_i, x_i^T\beta)x_i.  
 %\end{align} 
 %This means that it can be computed in the general case as 
 %\begin{align}
-% r(y_i, x_i^T\theta) =  \frac{\psi(y_i,x_i, \theta)}{x_i}
+% r(y_i, x_i^T\beta) =  \frac{\psi(y_i,x_i, \beta)}{x_i}
 %\end{align}
 %
 
@@ -93,30 +95,59 @@ M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \theta)^T  \psi(y_i,x_i, \theta).
 
 The Huber-White sandwich estimators implemented for linear, logistic, and multinomial-logistic regression mimic the same framework as  the linear/logistic regression implementations.  In these implementations, the gradient and Hessian are computed in parallel, and a final step operates on the aggregate result.  
 
-This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  The transition step computes the gradient and Hessian contribution from each row in the data matrix. The merge step sum two or more steps together.  The final step computes the inverse of the Hessian, the coefficients of the sandwich operator, and other relevant statistics appropriate to the regression.  %The gradient and Hessian calculations are identical to the gradient and Hessian calculations for logistic regression.  
+This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  
 
-We note that the Hessian and derivative both depend on $\theta$, so the variance estimates will also depend on $\theta$.  Rather than allow the user to specify a $\theta$ value, the implementation computes the optimal $\theta$ by running the appropriate regression  before computing the robust variance.  In cases where the regression has parameters (regression tolerance, max iterations), the interface allows the user to specify those parameters.
+The transition step computes the gradient and Hessian contribution from each row in the data matrix.  
+\subsection{Linear Regression Derivatives}
+For linear regression, the derivative can be computed exactly as 
+\begin{align}
+\frac{\partial L(x,y,\beta)}{\partial \beta} = X^T(y - X \beta)
+\end{align}
+and the Hessian is
+\begin{align}
+\frac{\partial^2 L(x,y,\beta)}{\partial^2 \beta} = -X^TX. 
+\end{align}
+
+\subsection{Logistic Regression Derivatives}
+For logistic, the derivative is 
+\begin{align}
+\frac{\partial L(x,y,\beta)}{\partial \beta} = \sum_i \frac{-1^{y_i}\cdot \beta}{1 + \exp(-1^{y_i} \cdot  \beta^Tx)}  \exp(-1^{y_i}\cdot \beta^Tx)
+\end{align}
+and the Hessian is
+\begin{align}
+\frac{\partial^2 L(x,y,\beta)}{\partial^2 \beta} = -X^TAX = -\sum_i a_{ii} x_i^T x_i 
+\end{align}
+where $A$ is a diagonal matrix with 
+\begin{align}
+a_{ii} = \left( [1 + \exp(c^Tx_i) ) (1 + \exp(-c^Tx_i)] \right)^{-1}.
+\end{align}
+
+\subsection{Multi-Logistic Regression Derivatives}
+For multi-logistic regression,  we replace $y_i$ with a vector $Y_i \in \{0,1\}^l$, where all entries of $Y_i$ are zero expect the $y_i$th entry, which is set to 1.  In addition, we choose a \textit{baseline} category, for which the odds of all the categories are measured against.  Let $J \in \{1, \dots, l \}$ be the baseline category.  
+
+Then we define the variables
+\begin{align}
+\pi_{i,j} &= \frac{\exp\left(\sum_{k=1}^g x_{i,k} \beta_{k,j} \right)}{1 + \sum_{j\ne J} \exp \left(\sum_{k=1}^g x_{i,k} \beta_{k,j} \right)}, \ \ \forall j \ne J\\
+\pi_{i,J} &= \frac{1}{1 + \sum_{j\ne J} \exp \left(\sum_{k=1}^k x_{i,k} \beta_{k,j} \right)}.
+\end{align}
+
+The derivatives are then
+\begin{equation}\label{eq:first_derivative}
+\frac{\partial L}{\partial \beta_{k,j}} = \sum_{i=1}^{N} y_{i,j}x_{i,k} - \pi_{i,j}x_{i,k} \ \ \ \ \forall k \  \forall j
+\end{equation}
+The Hessian is then 
+\begin{align}\label{eq:second_derivative}
+\frac{\partial^2 l({\beta})}{\partial \beta_{k_2,j_2} \partial \beta_{k_1,j_1}} 
+&= \sum_{i=1}^{N} -\pi_{i,j_2}x_{i,k_2}(1-\pi_{i,j_1})x_{i,k_1} &&j_1 = j_2 \\
+&= \sum_{i=1}^{N} \pi_{i,j_2}x_{i,k_2}\pi_{i,j_1}x_{i,k_1} &&j_1 \neq j_2 
+\end{align}
+
+\subsection{Merge Step and Final Step}
+
+For the logistic and multi-logistic, the derivative and Hessian are sums in which the terms can be computed in parallel, and thus in a distributed manner.  The transition steps compute a single term in the sum.  The merge step sums two or more terms computed by the transition steps, and the final step computes the Hessian inverse, and the matrix product between the bread and meat matrices.  
 
 
-\section{Input}
-	The robust variance function calls all have similar interfaces.  The common argument parameters are (in order):
-\begin{description}
-\item [source table] The table containing the source data.  
-\item [output table] The name of the table containg the computed statistics.  The function throws an error if the output table already exists. 
-\item [dependent variable] The dependent variable in the regression.   
-\item [independent variables]  The independent variables in the regression.    
-\item [grouping variable(s)]  The source table is divided into disjoint groups by the value of the grouping variable.  The robust variance and other statistics are computed and returned for each group.  
-\end{description}
-	In addition, each robust variance calculation can have arguments specific to that regression.  Regression specific arguments  always come after the common arguments.  
-
-\section{Output}
-	The output will be written to the table specified in the function call, and includes:
-\begin{description}
-\item [regression coefficients] The optimal coefficients computed by the regression.  
-\item [standard errors] The standard errors of the robust variance.
-\item [t- or z-statistics] The t- or z-statistics of the robust variance.   
-\item [p-values]  The p-values.      
-\end{description}
+We note that the Hessian and derivative both depend on $\beta$, so the variance estimates will also depend on $\beta$.  Rather than allow the user to specify a $\beta$ value, the implementation computes the optimal $\beta$ by running the appropriate regression  before computing the robust variance.  In cases where the regression has parameters (regression tolerance, max iterations), the interface allows the user to specify those parameters.
 
 	
 
