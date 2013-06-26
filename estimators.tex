@@ -40,7 +40,9 @@
 %\normalsize
 
 \section{Introduction}
-Given  $n$ data points, where the $i$th point is defined by a feature  vector $x_i \in \mathbb{R}^m$ and a category scalar $y_i$, where $y_i \in \mathbb{R}, y_i \in \{0,1 \}$, and $y_i \in \{1,\dots, l \}$ for linear, logistic, and multi-logistic regression respectively.  We assume that $y_i$ is drawn from an iid distribution determined by a $g$-dimensional parameter vector $\beta$ (which is $g\times l$ dimensional for multi-logistic regression).  Generally, we are interested in finding the values of $\beta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some log-likelihood function $L(y,x,\beta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
+Given  $n$ data points, where the $i$th point is defined by a feature  vector $x_i \in \mathbb{R}^m$ and a category scalar $y_i$, where $y_i \in \mathbb{R}, y_i \in \{0,1 \}$, and $y_i \in \{1,\dots, l \}$ for linear, logistic, and multi-logistic regression respectively.  We assume that $y_i$ is drawn from an independent and identically distributed (i.i.d.) distribution determined by a $g$-dimensional parameter vector $\beta$ (which is $g\times l$ dimensional for multi-logistic regression).  
+
+Generally, we are interested in finding the values of $\beta$ that best predict $y_i$ from $x_i$, with \textit{best} being defined as the values that maximize some log-likelihood function $L(y,x,\beta)$.  The maximization is typically solved using the derivative of the likelihood $\psi$  and the Hessian $H$.  More formally, $\psi$ is defined as 
 \begin{align}
 \psi(y,x, \beta) = \frac{\partial L(x,y,\beta)}{\partial \beta}
 \end{align} 
@@ -51,7 +53,7 @@ H(y,x, \beta) = \frac{\partial^2 L(x,y,\beta)}{\partial \beta^2}.
 Using these derivatives, one can solve the logistic or linear regression for the optimal solution, and compute the variance and other statistics of the regression.  
 
 
-However, we may believe that the underlying distribution is not iid, (in particular, the variance is not independent of $x_i$), in which case, our variance estimates will be incorrect. 
+However, we may believe that the underlying distribution is not i.i.d., (in particular, the variance is not independent of $x_i$), in which case, our variance estimates will be incorrect. 
  The Huber sandwich estimator is used to get a robust estimate of the variance even if the iid assumption is wrong.  The estimator is known as a sandwich estimator because the robust covariance matrix $S(\beta)$ of $\beta$ can be expressed in a \textit{sandwich formulation}, of the form
 \begin{align}
 S(\beta) = B(\beta) M(\beta) B(\beta).  
@@ -95,11 +97,9 @@ M_{H} =\frac{1}{n} \sum_i^n \psi(y_i,x_i, \beta)^T  \psi(y_i,x_i, \beta).
 
 The Huber-White sandwich estimators implemented for linear, logistic, and multinomial-logistic regression mimic the same framework as  the linear/logistic regression implementations.  In these implementations, the gradient and Hessian are computed in parallel, and a final step operates on the aggregate result.  
 
-This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  
-
-The transition step computes the gradient and Hessian contribution from each row in the data matrix.  
+This framework breaks the computation into three steps: \textit{transition} step, the \textit{merge states} step, and the \textit{final} step.  The transition step computes the gradient and Hessian contribution from each row in the data matrix.  To compute this step, we need to define the derivatives for each regression.  
 \subsection{Linear Regression Derivatives}
-For linear regression, the derivative can be computed exactly as 
+For linear regression, the derivative is 
 \begin{align}
 \frac{\partial L(x,y,\beta)}{\partial \beta} = X^T(y - X \beta)
 \end{align}
@@ -115,11 +115,11 @@ For logistic, the derivative is
 \end{align}
 and the Hessian is
 \begin{align}
-\frac{\partial^2 L(x,y,\beta)}{\partial^2 \beta} = -X^TAX = -\sum_i a_{ii} x_i^T x_i 
+\frac{\partial^2 L(x,y,\beta)}{\partial^2 \beta} = -X^TAX = -\sum_i A_{ii} x_i^T x_i 
 \end{align}
 where $A$ is a diagonal matrix with 
 \begin{align}
-a_{ii} = \left( [1 + \exp(c^Tx_i) ) (1 + \exp(-c^Tx_i)] \right)^{-1}.
+A_{ii} = \left( [1 + \exp(c^Tx_i) ) (1 + \exp(-c^Tx_i)] \right)^{-1}.
 \end{align}
 
 \subsection{Multi-Logistic Regression Derivatives}
@@ -144,7 +144,7 @@ The Hessian is then
 
 \subsection{Merge Step and Final Step}
 
-For the logistic and multi-logistic, the derivative and Hessian are sums in which the terms can be computed in parallel, and thus in a distributed manner.  The transition steps compute a single term in the sum.  The merge step sums two or more terms computed by the transition steps, and the final step computes the Hessian inverse, and the matrix product between the bread and meat matrices.  
+For the logistic and multi-logistic, the derivative and Hessian are sums in which the terms can be computed in parallel, and thus in a distributed manner.  Each transition step computes a single term in the sum.  The merge step sums two or more terms computed by the transition steps, and the final step computes the Hessian inverse, and the matrix product between the bread and meat matrices.  
 
 
 We note that the Hessian and derivative both depend on $\beta$, so the variance estimates will also depend on $\beta$.  Rather than allow the user to specify a $\beta$ value, the implementation computes the optimal $\beta$ by running the appropriate regression  before computing the robust variance.  In cases where the regression has parameters (regression tolerance, max iterations), the interface allows the user to specify those parameters.
